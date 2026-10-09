@@ -1,9 +1,9 @@
 [submodule "legacy"]
 	path = legacy
-	url = https://github.com/leihs/leihs_legacy
+	url = https://github.com/unstable7345/leihs_legacy.git
 [submodule "database"]
 	path = database
-	url = https://github.com/leihs/leihs_database
+	url = https://github.com/unstable7345/leihs_database.git
 [submodule "deploy"]
 	path = deploy
 	url = https://github.com/leihs/leihs_deploy
@@ -15,7 +15,7 @@
   url = https://github.com/leihs/leihs_documentation
 [submodule "admin"]
 	path = admin
-	url = https://github.com/leihs/leihs-admin.git
+	url = https://github.com/unstable7345/leihs-admin.git
 [submodule "procure"]
 	path = procure
 	url = https://github.com/leihs/leihs-procure
@@ -30,7 +30,7 @@
         url = https://github.com/leihs/leihs-mail.git
 [submodule "borrow"]
 	path = borrow
-	url = https://github.com/leihs/leihs-borrow.git
+	url = https://github.com/unstable7345/leihs-borrow.git
 [submodule "inventory"]
 	path = inventory
 	url = https://github.com/leihs/leihs-inventory.git
