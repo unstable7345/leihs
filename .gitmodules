@@ -18,7 +18,7 @@
 	url = https://github.com/unstable7345/leihs-admin.git
 [submodule "procure"]
 	path = procure
-	url = https://github.com/leihs/leihs-procure
+	url = https://github.com/unstable7345/leihs-procure.git
 [submodule "my"]
 	path = my
 	url = https://github.com/leihs/leihs-my
