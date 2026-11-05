@@ -1,0 +1,15 @@
+{
+  "name": "leihs-ms-auth-bridge",
+  "version": "1.0.0",
+  "description": "External authentication system that lets leihs sign users in with Microsoft Entra ID",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "jose": "6.2.15"
+  }
+}
