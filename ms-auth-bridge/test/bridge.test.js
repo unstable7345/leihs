@@ -21,6 +21,7 @@ let microsoftUrl;
 let bridge;
 let bridgeUrl;
 let events;
+let ensureAccount;
 
 function listen(server) {
   return new Promise((resolve) => {
@@ -100,6 +101,7 @@ before(async () => {
     identityClaim: 'preferred_username',
     privateKey,
     authority: microsoftUrl,
+    accounts: { ensure: (...args) => ensureAccount(...args) },
     now: () => currentTime,
     log: (event, details) => events.push({ event, ...details }),
   });
@@ -119,6 +121,7 @@ beforeEach(() => {
   currentTime = new Date();
   events = [];
   idTokenFor = (authorize) => signIdToken(goodClaims(authorize));
+  ensureAccount = async () => true;
 });
 
 async function start(token) {
@@ -253,6 +256,37 @@ for (const [name, build] of Object.entries(badIdTokens)) {
     assert.equal(response.headers.get('location'), null);
   });
 }
+
+test('prepares the account with the verified identity before returning to leihs', async () => {
+  const calls = [];
+  ensureAccount = async (...args) => { calls.push(args); };
+  const response = await callback(await start());
+  assert.equal(response.status, 302);
+  assert.equal(calls.length, 1);
+  const [identity, claims, authSystemId] = calls[0];
+  assert.equal(identity, 'real.user@enti.cat');
+  assert.equal(claims.tid, TENANT);
+  assert.equal(authSystemId, 'microsoft');
+});
+
+test('does not touch accounts when the identity fails verification', async () => {
+  const calls = [];
+  ensureAccount = async (...args) => { calls.push(args); };
+  idTokenFor = badIdTokens['another nonce'];
+  assert.notEqual((await callback(await start())).status, 302);
+  assert.deepEqual(calls, []);
+});
+
+test('still returns to leihs when the account step fails, and logs why', async () => {
+  ensureAccount = async () => { throw new Error('user search failed with status 401'); };
+  const response = await callback(await start());
+  assert.equal(response.status, 302);
+  assert.deepEqual(events.find((e) => e.event === 'account_failed'), {
+    event: 'account_failed',
+    identity: 'real.user@enti.cat',
+    reason: 'user search failed with status 401',
+  });
+});
 
 test('answers the health check and rejects other routes and methods', async () => {
   assert.equal((await fetch(`${bridgeUrl}/ms-auth/health`)).status, 200);

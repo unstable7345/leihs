@@ -5,7 +5,7 @@ import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose';
 const TOKEN_LIFETIME_SECONDS = 90;
 const PENDING_LIFETIME_MS = 10 * 60 * 1000;
 const COOKIE_NAME = 'leihs_ms_auth';
-const LEIHS_SIGN_IN_PATH = /^\/sign-in\/external-authentication\/[^/?#]+\/sign-in$/;
+const LEIHS_SIGN_IN_PATH = /^\/sign-in\/external-authentication\/([^/?#]+)\/sign-in$/;
 
 const randomToken = () => randomBytes(32).toString('base64url');
 
@@ -169,7 +169,19 @@ export function createBridge(config) {
     if (typeof identity !== 'string' || !identity.includes('@')) {
       throw new BridgeError(`id token has no usable ${identityClaim} claim`);
     }
-    return identity.toLowerCase();
+    return { identity: identity.toLowerCase(), claims: payload };
+  }
+
+  // A failure here must not lock out people who already have an account, for
+  // example when the API token expires: leihs itself refuses anyone without one.
+  async function ensureAccount(identity, claims, requestClaims) {
+    if (!config.accounts) return;
+    const [, authSystemId] = requestClaims.path.match(LEIHS_SIGN_IN_PATH);
+    try {
+      await config.accounts.ensure(identity, claims, authSystemId);
+    } catch (error) {
+      log('account_failed', { identity, reason: error.message });
+    }
   }
 
   async function finishSignIn(req, res, url) {
@@ -188,7 +200,8 @@ export function createBridge(config) {
     }
 
     const idToken = await redeemCode(url.searchParams.get('code') ?? '', entry.verifier);
-    const identity = await verifiedIdentity(idToken, entry.nonce);
+    const { identity, claims } = await verifiedIdentity(idToken, entry.nonce);
+    await ensureAccount(identity, claims, entry.requestClaims);
     const token = await buildSignInToken(identity, entry.requestClaims, privateKey, clock());
 
     // The destination comes from configuration: only the checked path is taken from the token.
