@@ -65,8 +65,8 @@ En **Admin → System → Authentication Systems**, crear uno nuevo:
 
 | Campo | Valor |
 | --- | --- |
-| `id` | `microsoft` |
-| `name` | `Microsoft` (es el texto del botón) |
+| `id` | `microsoft` (con este id el botón sale blanco con el logo de Microsoft) |
+| `name` | `Login ENTI-UB` (es el texto del botón) |
 | `type` | `external` |
 | `enabled` | sí |
 | `external_sign_in_url` | `https://leihs.enti.cat/ms-auth/sign-in` |

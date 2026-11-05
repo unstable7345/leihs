@@ -21,7 +21,7 @@
 	url = https://github.com/unstable7345/leihs-procure.git
 [submodule "my"]
 	path = my
-	url = https://github.com/leihs/leihs-my
+	url = https://github.com/unstable7345/leihs-my.git
 [submodule "integration-tests"]
 	path = integration-tests
 	url = https://github.com/leihs/leihs-integration-tests.git
