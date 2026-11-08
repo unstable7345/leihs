@@ -44,6 +44,16 @@ sudo cp deploy/leihs-ms-auth.service /etc/systemd/system/
 sudo cp deploy/leihs_050_ms_auth.conf /etc/apache2/leihs/conf.d/
 ```
 
+**El despliegue de leihs borra `/etc/apache2/leihs` cada vez**, y con ella este archivo: después de
+desplegar, el botón lleva a un "Not Found" de Apache. Para que la regla sobreviva, hay que añadirla
+también a las variables del host en el inventario del despliegue (el archivo donde está
+`leihs_external_base_url`), y el despliegue la escribe en `leihs_900_custom.conf`:
+
+```yaml
+reverse_proxy_custom_config: |
+  ProxyPass /ms-auth http://localhost:3999/ms-auth nocanon retry=0
+```
+
 Editar `/etc/leihs-ms-auth/env` con los datos de TI y arrancar:
 
 ```bash
