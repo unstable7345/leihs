@@ -1,0 +1,17 @@
+{
+  "name": "leihs-calendar-sync",
+  "version": "1.0.0",
+  "description": "Copies leihs reservations of chosen categories as events to Outlook calendars",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "pg": "8.23.1"
+  }
+}
