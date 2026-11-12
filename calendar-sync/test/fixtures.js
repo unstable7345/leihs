@@ -9,6 +9,7 @@ export const RESERVATION = {
   model_name: 'Buc 3',
   user_name: 'Ana Puig',
   delegated_user_name: null,
+  booker_email: 'ana.puig@enti.cat',
   purpose: 'Mezcla del proyecto final',
   pool_name: 'Magatzem',
 };

@@ -22,6 +22,8 @@ SELECT DISTINCT
   models.name AS model_name,
   concat_ws(' ', users.firstname, users.lastname) AS user_name,
   nullif(concat_ws(' ', delegated_users.firstname, delegated_users.lastname), '') AS delegated_user_name,
+  -- Who made the reservation: in a delegation, the person acting for it.
+  nullif(btrim(coalesce(delegated_users.email, users.email)), '') AS booker_email,
   coalesce(nullif(btrim(reservations.line_purpose), ''), orders.purpose) AS purpose,
   inventory_pools.name AS pool_name
 FROM reservations

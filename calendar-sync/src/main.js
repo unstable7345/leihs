@@ -36,6 +36,7 @@ const config = {
   dryRun,
   statuses,
   timeZone: process.env.TIME_ZONE?.trim() || 'Europe/Madrid',
+  inviteBooker: process.env.INVITE_BOOKER?.trim() === 'true',
 };
 const intervalSeconds = Number(process.env.SYNC_INTERVAL_SECONDS || 60);
 
@@ -80,7 +81,7 @@ const sleep = (seconds) => new Promise((resolve) => {
   timer = setTimeout(resolve, seconds * 1000);
 });
 
-log('started', { dryRun, once, statuses, timeZone: config.timeZone, intervalSeconds });
+log('started', { dryRun, once, statuses, timeZone: config.timeZone, inviteBooker: config.inviteBooker, intervalSeconds });
 do {
   let pause = intervalSeconds;
   try {

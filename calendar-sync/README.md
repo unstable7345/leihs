@@ -26,6 +26,12 @@ leihs (Postgres) ──cada minuto──▶ calendar-sync ──Microsoft Graph�
 
 El calendario se llama «Reservas leihs» (`CALENDAR_NAME`) y se crea solo si no existe.
 
+**Invitaciones** (`INVITE_BOOKER=true`): quien hizo la reserva (en una delegación, la persona que reservó
+por ella) es invitado al evento. Exchange le envía la invitación desde el buzón, y también la actualización
+si cambia la hora y la cancelación si la reserva se anula o se borra. El evento no pide respuesta, así que
+el buzón no recibe aceptaciones ni rechazos. No hace falta ningún permiso más que el de calendario. Al
+activarlo, los eventos futuros que ya existían se actualizan y sus reservas también reciben la invitación.
+
 ## 1. Microsoft: la app y el permiso
 
 **En Microsoft Entra** (no hace falta ser admin, solo poder registrar apps):

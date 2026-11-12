@@ -34,3 +34,32 @@ test('the fingerprint changes only when the event changes', () => {
   assert.notEqual(item.fingerprint, itemFor({ ...RESERVATION, end_time: '13:00' }, CONFIG).fingerprint);
   assert.equal(item.endsAt, '2026-11-12T12:30:00');
 });
+
+test('without inviteBooker there are no attendees', () => {
+  const event = eventFor(RESERVATION, CONFIG);
+  assert.equal(event.attendees, undefined);
+  assert.equal(event.responseRequested, undefined);
+});
+
+test('with inviteBooker the person who reserved is invited, without asking for a response', () => {
+  const event = eventFor(RESERVATION, { ...CONFIG, inviteBooker: true });
+  assert.deepEqual(event.attendees, [
+    { type: 'required', emailAddress: { address: 'ana.puig@enti.cat', name: 'Ana Puig' } },
+  ]);
+  assert.equal(event.responseRequested, false);
+  assert.equal(event.allowNewTimeProposals, false);
+});
+
+test('in a delegation the person acting for it is invited', () => {
+  const event = eventFor({ ...RESERVATION, user_name: 'Sonido 2B', delegated_user_name: 'Pol Vidal', booker_email: 'pol.vidal@enti.cat' }, { ...CONFIG, inviteBooker: true });
+  assert.deepEqual(event.attendees[0].emailAddress, { address: 'pol.vidal@enti.cat', name: 'Pol Vidal' });
+});
+
+test('without an email the event is created without attendees', () => {
+  const event = eventFor({ ...RESERVATION, booker_email: null }, { ...CONFIG, inviteBooker: true });
+  assert.equal(event.attendees, undefined);
+});
+
+test('turning invitations on changes the fingerprint, so existing events get the attendee', () => {
+  assert.notEqual(itemFor(RESERVATION, CONFIG).fingerprint, itemFor(RESERVATION, { ...CONFIG, inviteBooker: true }).fingerprint);
+});
