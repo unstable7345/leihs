@@ -61,12 +61,22 @@ export function eventFor(reservation, { timeZone, inviteBooker = false }) {
   };
 }
 
+/**
+ * The calendar of the mailbox that receives the reservation: with a calendar
+ * group, one calendar per space, named like the model; else the one calendar
+ * (an empty name is the main calendar of the mailbox).
+ */
+export function calendarFor(reservation, { calendarGroup = '', calendarName = '' }) {
+  return calendarGroup ? reservation.model_name : calendarName;
+}
+
 /** Everything the sync needs to know about one reservation in one calendar. */
 export function itemFor(reservation, config) {
   const event = eventFor(reservation, config);
   return {
     reservationId: reservation.reservation_id,
     mailbox: reservation.mailbox,
+    calendar: calendarFor(reservation, config),
     event,
     fingerprint: createHash('sha256').update(JSON.stringify(event)).digest('hex'),
     endsAt: event.end.dateTime,

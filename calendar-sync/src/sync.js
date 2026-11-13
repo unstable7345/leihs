@@ -21,6 +21,7 @@ function describe(action) {
     return {
       reservation: item.reservationId,
       mailbox: item.mailbox,
+      ...(item.calendar && { calendar: item.calendar }),
       subject: item.event.subject,
       start: item.event.start.dateTime,
       end: item.event.end.dateTime,
@@ -39,7 +40,7 @@ const isMailboxError = (error) => [401, 403].includes(error.status)
 async function apply(action, { db, graph }) {
   switch (action.type) {
     case 'create': {
-      const eventId = await graph.createEvent(action.item.mailbox, action.item.event);
+      const eventId = await graph.createEvent(action.item.mailbox, action.item.calendar, action.item.event);
       await db.save(action.item, eventId);
       return;
     }
@@ -52,6 +53,15 @@ async function apply(action, { db, graph }) {
         if (!isNotFound(error)) throw error;
         await apply({ type: 'create', item: action.item }, { db, graph });
       }
+      return;
+    case 'move':
+      // Outlook cannot move events between calendars: delete, then create.
+      try {
+        await graph.deleteEvent(action.row.mailbox, action.row.eventId);
+      } catch (error) {
+        if (!isNotFound(error)) throw error;
+      }
+      await apply({ type: 'create', item: action.item }, { db, graph });
       return;
     case 'delete':
       try {
@@ -77,9 +87,9 @@ async function apply(action, { db, graph }) {
 export async function syncOnce({ db, graph, config, log, now = new Date() }) {
   const today = localNow(config.timeZone, now).slice(0, 10);
   const desired = (await db.desired(config.statuses, today)).map((row) => itemFor(row, config));
-  const actions = plan(desired, await db.synced(), localNow(config.timeZone, now));
+  const actions = plan(desired, await db.synced(), localNow(config.timeZone, now), config.calendarName ?? '');
 
-  const counts = { create: 0, update: 0, delete: 0, forget: 0, failed: 0 };
+  const counts = { create: 0, update: 0, move: 0, delete: 0, forget: 0, failed: 0 };
   const failedMailboxes = new Set();
   let retryAfterSeconds;
 

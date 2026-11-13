@@ -30,12 +30,13 @@ export function createGraph({
   tenantId,
   clientId,
   clientSecret,
-  calendarName,
+  calendarGroup = '',
   graphUrl = 'https://graph.microsoft.com/v1.0',
   tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
 }) {
   let token;
   const calendarIds = new Map();
+  const groupIds = new Map();
 
   async function accessToken() {
     if (token && Date.now() < token.expiresAt - TOKEN_MARGIN_MS) return token.value;
@@ -73,22 +74,40 @@ export function createGraph({
   }
 
   const user = (mailbox) => `/users/${encodeURIComponent(mailbox)}`;
+  const byName = (items, name) => items.find((item) => item.name === name);
 
-  /** The events path of the mailbox's calendar, created if it is missing. */
-  async function eventsPath(mailbox) {
-    if (!calendarName) return `${user(mailbox)}/calendar/events`;
-    if (!calendarIds.has(mailbox)) {
-      const filter = encodeURIComponent(`name eq '${calendarName.replaceAll("'", "''")}'`);
-      const { value } = await request('GET', `${user(mailbox)}/calendars?$filter=${filter}&$select=id,name`);
-      const calendar = value[0] ?? (await request('POST', `${user(mailbox)}/calendars`, { name: calendarName }));
-      calendarIds.set(mailbox, calendar.id);
+  /** Path of the calendar group of the mailbox, created if it is missing. */
+  async function groupPath(mailbox) {
+    if (!groupIds.has(mailbox)) {
+      const { value } = await request('GET', `${user(mailbox)}/calendarGroups?$select=id,name&$top=100`);
+      const group = byName(value, calendarGroup)
+        ?? (await request('POST', `${user(mailbox)}/calendarGroups`, { name: calendarGroup }));
+      groupIds.set(mailbox, group.id);
     }
-    return `${user(mailbox)}/calendars/${encodeURIComponent(calendarIds.get(mailbox))}/events`;
+    return `${user(mailbox)}/calendarGroups/${encodeURIComponent(groupIds.get(mailbox))}`;
+  }
+
+  /**
+   * The events path of a calendar of the mailbox, created if it is missing:
+   * inside the calendar group when there is one. An empty name is the main
+   * calendar.
+   */
+  async function eventsPath(mailbox, calendarName) {
+    if (!calendarName) return `${user(mailbox)}/calendar/events`;
+    const key = `${mailbox}\n${calendarName}`;
+    if (!calendarIds.has(key)) {
+      const parent = calendarGroup ? await groupPath(mailbox) : user(mailbox);
+      const { value } = await request('GET', `${parent}/calendars?$select=id,name&$top=200`);
+      const calendar = byName(value, calendarName)
+        ?? (await request('POST', `${parent}/calendars`, { name: calendarName }));
+      calendarIds.set(key, calendar.id);
+    }
+    return `${user(mailbox)}/calendars/${encodeURIComponent(calendarIds.get(key))}/events`;
   }
 
   return {
-    async createEvent(mailbox, event) {
-      const created = await request('POST', await eventsPath(mailbox), event);
+    async createEvent(mailbox, calendarName, event) {
+      const created = await request('POST', await eventsPath(mailbox, calendarName), event);
       return created.id;
     },
 

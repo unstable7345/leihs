@@ -26,6 +26,14 @@ leihs (Postgres) ──cada minuto──▶ calendar-sync ──Microsoft Graph�
 
 El calendario se llama «Reservas leihs» (`CALENDAR_NAME`) y se crea solo si no existe.
 
+**Un calendario por espacio** (`CALENDAR_GROUP=Reservas leihs`): en lugar de un solo calendario, cada
+espacio tiene el suyo, con el nombre del modelo en leihs («Buc 1», «Sala de Control»…), dentro de un grupo
+de calendarios con ese nombre. El grupo y cada calendario se crean con la primera reserva aprobada de ese
+espacio. Si una reserva cambia de modelo, su evento pasa al calendario del otro espacio: Outlook no mueve
+eventos entre calendarios, así que se borra y se crea de nuevo (quien reservó recibe la cancelación y una
+invitación nueva). Al activarlo, los eventos futuros del calendario único pasan a su espacio de la misma
+forma; el calendario único queda vacío y se puede borrar a mano. Necesita la migración 083 de leihs.
+
 **Invitaciones** (`INVITE_BOOKER=true`): quien hizo la reserva (en una delegación, la persona que reservó
 por ella) es invitado al evento. Exchange le envía la invitación desde el buzón, y también la actualización
 si cambia la hora y la cancelación si la reserva se anula o se borra. El evento no pide respuesta, así que

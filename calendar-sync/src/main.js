@@ -37,6 +37,8 @@ const config = {
   statuses,
   timeZone: process.env.TIME_ZONE?.trim() || 'Europe/Madrid',
   inviteBooker: process.env.INVITE_BOOKER?.trim() === 'true',
+  calendarName: process.env.CALENDAR_NAME?.trim() ?? '',
+  calendarGroup: process.env.CALENDAR_GROUP?.trim() ?? '',
 };
 const intervalSeconds = Number(process.env.SYNC_INTERVAL_SECONDS || 60);
 
@@ -49,7 +51,7 @@ if (!dryRun) {
     tenantId,
     clientId: required('MS_CLIENT_ID'),
     clientSecret: required('MS_CLIENT_SECRET'),
-    calendarName: process.env.CALENDAR_NAME?.trim() ?? '',
+    calendarGroup: config.calendarGroup,
   });
 }
 
@@ -81,7 +83,15 @@ const sleep = (seconds) => new Promise((resolve) => {
   timer = setTimeout(resolve, seconds * 1000);
 });
 
-log('started', { dryRun, once, statuses, timeZone: config.timeZone, inviteBooker: config.inviteBooker, intervalSeconds });
+log('started', {
+  dryRun,
+  once,
+  statuses,
+  timeZone: config.timeZone,
+  inviteBooker: config.inviteBooker,
+  calendars: config.calendarGroup ? `one per space in group "${config.calendarGroup}"` : `"${config.calendarName || 'main calendar'}"`,
+  intervalSeconds,
+});
 do {
   let pause = intervalSeconds;
   try {

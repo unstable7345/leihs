@@ -40,18 +40,19 @@ WHERE reservations.type = 'ItemLine'
 `;
 
 const SYNCED_SQL = `
-SELECT reservation_id, mailbox, event_id, fingerprint,
+SELECT reservation_id, mailbox, event_id, fingerprint, calendar,
        to_char(ends_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS ends_at
 FROM outlook_calendar_events
 `;
 
 const SAVE_SQL = `
-INSERT INTO outlook_calendar_events (reservation_id, mailbox, event_id, fingerprint, ends_at)
-VALUES ($1, $2, $3, $4, $5::timestamp)
+INSERT INTO outlook_calendar_events (reservation_id, mailbox, event_id, fingerprint, ends_at, calendar)
+VALUES ($1, $2, $3, $4, $5::timestamp, $6)
 ON CONFLICT (reservation_id, mailbox) DO UPDATE
 SET event_id = EXCLUDED.event_id,
     fingerprint = EXCLUDED.fingerprint,
     ends_at = EXCLUDED.ends_at,
+    calendar = EXCLUDED.calendar,
     updated_at = now()
 `;
 
@@ -74,11 +75,12 @@ export function createLeihsDb(pool) {
         eventId: row.event_id,
         fingerprint: row.fingerprint,
         endsAt: row.ends_at,
+        calendar: row.calendar,
       }));
     },
 
     async save(item, eventId) {
-      await pool.query(SAVE_SQL, [item.reservationId, item.mailbox, eventId, item.fingerprint, item.endsAt]);
+      await pool.query(SAVE_SQL, [item.reservationId, item.mailbox, eventId, item.fingerprint, item.endsAt, item.calendar]);
     },
 
     async remove({ reservationId, mailbox }) {
