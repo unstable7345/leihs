@@ -60,7 +60,9 @@ export function createGraph({
   }
 
   async function request(method, path, body) {
-    const response = await fetch(`${graphUrl}${path}`, {
+    // Paging links come back as whole URLs.
+    const target = path.startsWith('https://') || path.startsWith('http://') ? path : `${graphUrl}${path}`;
+    const response = await fetch(target, {
       method,
       headers: {
         Authorization: `Bearer ${await accessToken()}`,
@@ -88,26 +90,47 @@ export function createGraph({
   }
 
   /**
-   * The events path of a calendar of the mailbox, created if it is missing:
-   * inside the calendar group when there is one. An empty name is the main
-   * calendar.
+   * A calendar of the mailbox, created if it is missing: inside the calendar
+   * group when there is one. An empty name is the main calendar. Says whether
+   * this call created it.
    */
-  async function eventsPath(mailbox, calendarName) {
-    if (!calendarName) return `${user(mailbox)}/calendar/events`;
+  async function calendar(mailbox, calendarName) {
+    if (!calendarName) return { path: `${user(mailbox)}/calendar`, created: false };
     const key = `${mailbox}\n${calendarName}`;
+    let created = false;
     if (!calendarIds.has(key)) {
       const parent = calendarGroup ? await groupPath(mailbox) : user(mailbox);
       const { value } = await request('GET', `${parent}/calendars?$select=id,name&$top=200`);
-      const calendar = byName(value, calendarName)
-        ?? (await request('POST', `${parent}/calendars`, { name: calendarName }));
-      calendarIds.set(key, calendar.id);
+      let found = byName(value, calendarName);
+      if (!found) {
+        found = await request('POST', `${parent}/calendars`, { name: calendarName });
+        created = true;
+      }
+      calendarIds.set(key, found.id);
     }
-    return `${user(mailbox)}/calendars/${encodeURIComponent(calendarIds.get(key))}/events`;
+    return { path: `${user(mailbox)}/calendars/${encodeURIComponent(calendarIds.get(key))}`, created };
   }
 
   return {
+    /** Makes sure the calendar exists; true when this call created it. */
+    async ensureCalendar(mailbox, calendarName) {
+      return (await calendar(mailbox, calendarName)).created;
+    },
+
+    /** Id and subject of every event of the calendar. */
+    async listEvents(mailbox, calendarName) {
+      let next = `${(await calendar(mailbox, calendarName)).path}/events?$select=id,subject&$top=100`;
+      const events = [];
+      while (next) {
+        const page = await request('GET', next);
+        events.push(...page.value);
+        next = page['@odata.nextLink'];
+      }
+      return events;
+    },
+
     async createEvent(mailbox, calendarName, event) {
-      const created = await request('POST', await eventsPath(mailbox, calendarName), event);
+      const created = await request('POST', `${(await calendar(mailbox, calendarName)).path}/events`, event);
       return created.id;
     },
 

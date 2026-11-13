@@ -28,8 +28,9 @@ El calendario se llama «Reservas leihs» (`CALENDAR_NAME`) y se crea solo si no
 
 **Un calendario por espacio** (`CALENDAR_GROUP=Reservas leihs`): en lugar de un solo calendario, cada
 espacio tiene el suyo, con el nombre del modelo en leihs («Buc 1», «Sala de Control»…), dentro de un grupo
-de calendarios con ese nombre. El grupo y cada calendario se crean con la primera reserva aprobada de ese
-espacio. Si una reserva cambia de modelo, su evento pasa al calendario del otro espacio: Outlook no mueve
+de calendarios con ese nombre. El servicio crea el grupo y el calendario de cada espacio de la categoría
+en cuanto arranca, aunque todavía no tenga reservas, y el de un espacio nuevo en el minuto siguiente a
+añadirlo a la categoría (sale como `calendar_created` en el registro). Si una reserva cambia de modelo, su evento pasa al calendario del otro espacio: Outlook no mueve
 eventos entre calendarios, así que se borra y se crea de nuevo (quien reservó recibe la cancelación y una
 invitación nueva). Al activarlo, los eventos futuros del calendario único pasan a su espacio de la misma
 forma; el calendario único queda vacío y se puede borrar a mano. Necesita la migración 083 de leihs.
@@ -125,6 +126,20 @@ aplicó, o el buzón no está en el scope de Exchange. El servicio lo reintenta 
 
 **Cuando caduca el secreto**, todo falla con estado 401: hay que crear otro en Entra, cambiar
 `MS_CLIENT_SECRET` y reiniciar el servicio.
+
+## Eventos de prueba
+
+Para ver los calendarios con algo dentro sin hacer reservas, `--test-events` pone en
+el calendario de cada espacio un evento «PRUEBA leihs — Buc 1» mañana de 10:00 a 11:00. No invita a nadie,
+se ve como libre y leihs no lo conoce, así que el servicio no lo toca. Volver a lanzarlo no duplica nada.
+Con `--test-events --remove` se borran (solo los que empiezan por «PRUEBA leihs»):
+
+```bash
+sudo systemd-run --pipe --wait --uid=leihs-calendar-sync -p EnvironmentFile=/etc/leihs/config.env -p EnvironmentFile=/etc/leihs-calendar-sync/env -p WorkingDirectory=/opt/leihs-calendar-sync /usr/bin/node src/main.js --test-events
+sudo systemd-run --pipe --wait --uid=leihs-calendar-sync -p EnvironmentFile=/etc/leihs/config.env -p EnvironmentFile=/etc/leihs-calendar-sync/env -p WorkingDirectory=/opt/leihs-calendar-sync /usr/bin/node src/main.js --test-events --remove
+```
+
+Añadiendo `--dry-run`, solo dice en qué calendarios lo haría.
 
 ## Comprobaciones
 

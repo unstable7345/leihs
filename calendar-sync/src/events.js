@@ -70,6 +70,20 @@ export function calendarFor(reservation, { calendarGroup = '', calendarName = ''
   return calendarGroup ? reservation.model_name : calendarName;
 }
 
+/**
+ * The calendars that should exist, one per mailbox and name, from the spaces
+ * leihs has (rows with mailbox and model_name). The main calendar of a mailbox
+ * has an empty name.
+ */
+export function calendarsOf(spaces, config) {
+  const seen = new Map();
+  for (const space of spaces) {
+    const calendar = calendarFor(space, config);
+    seen.set(`${space.mailbox}\n${calendar}`, { mailbox: space.mailbox, calendar });
+  }
+  return [...seen.values()];
+}
+
 /** Everything the sync needs to know about one reservation in one calendar. */
 export function itemFor(reservation, config) {
   const event = eventFor(reservation, config);

@@ -13,12 +13,15 @@ let rows;
 let calls;
 let failures;
 let logs;
+let spaces;
+let ensured;
 
 const db = {
   async desired(statuses, today) {
     calls.push(['desired', statuses, today]);
     return reservations;
   },
+  async spaces() { return spaces; },
   async synced() { return [...rows.values()]; },
   async save(item, eventId) {
     rows.set(item.reservationId, { reservationId: item.reservationId, mailbox: item.mailbox, eventId, fingerprint: item.fingerprint, endsAt: item.endsAt, calendar: item.calendar });
@@ -33,6 +36,13 @@ function call(name, ...args) {
 }
 
 const graph = {
+  // Kept apart from calls: the calendars are prepared on every round.
+  async ensureCalendar(mailbox, calendar) {
+    if (failures.ensureCalendar) throw failures.ensureCalendar;
+    const known = ensured.has(`${mailbox} ${calendar}`);
+    ensured.add(`${mailbox} ${calendar}`);
+    return !known;
+  },
   async createEvent(mailbox, calendar, event) { call('createEvent', mailbox, event.subject, calendar); return `event-${calls.length}`; },
   async updateEvent(mailbox, id, event) { call('updateEvent', mailbox, id, event.subject); },
   async deleteEvent(mailbox, id) { call('deleteEvent', mailbox, id); },
@@ -47,6 +57,8 @@ beforeEach(() => {
   calls = [];
   failures = {};
   logs = [];
+  spaces = [];
+  ensured = new Set();
 });
 
 test('local time is the wall clock of the pool', () => {
@@ -158,4 +170,55 @@ test('a reservation that changes space moves to that calendar, also if the old e
   assert.equal(counts.move, 1);
   assert.deepEqual(graphCalls().at(-1), ['createEvent', 'so@enti.cat', 'Buc 4 — Ana Puig', 'Buc 4']);
   assert.equal(rows.get('r1').calendar, 'Buc 4');
+});
+
+test('every space gets its calendar before its first reservation, once', async () => {
+  reservations = [];
+  spaces = [
+    { mailbox: 'so@enti.cat', model_name: 'Buc 1' },
+    { mailbox: 'so@enti.cat', model_name: 'Auditorio' },
+  ];
+  const config = { ...CONFIG, calendarGroup: 'Reservas leihs' };
+  await sync(config);
+  assert.deepEqual(logs.filter((l) => l.event === 'calendar_created').map((l) => l.calendar), ['Buc 1', 'Auditorio']);
+  assert.deepEqual(graphCalls(), [], 'no events');
+
+  logs = [];
+  await sync(config);
+  assert.deepEqual(logs, [], 'nothing to say the second time');
+});
+
+test('without a group the one calendar is prepared, the main calendar is not', async () => {
+  spaces = [{ mailbox: 'so@enti.cat', model_name: 'Buc 1' }, { mailbox: 'so@enti.cat', model_name: 'Buc 2' }];
+  reservations = [];
+  await sync();
+  assert.deepEqual([...ensured], ['so@enti.cat Reservas leihs']);
+
+  ensured = new Set();
+  await sync({ ...CONFIG, calendarName: '' });
+  assert.deepEqual([...ensured], []);
+});
+
+test('a dry run lists the calendars it would prepare', async () => {
+  spaces = [{ mailbox: 'so@enti.cat', model_name: 'Buc 1' }];
+  reservations = [];
+  await sync({ ...CONFIG, dryRun: true, calendarGroup: 'Reservas leihs' });
+  assert.deepEqual(logs[0], { event: 'would_prepare_calendars', mailbox: 'so@enti.cat', calendars: ['Buc 1'] });
+  assert.equal(ensured.size, 0);
+});
+
+test('a calendar that cannot be made skips the events of that mailbox in the round', async () => {
+  spaces = [{ mailbox: 'so@enti.cat', model_name: 'Buc 3' }];
+  failures.ensureCalendar = new GraphError(403, 'ErrorAccessDenied', 'no');
+  await sync({ ...CONFIG, calendarGroup: 'Reservas leihs' });
+  assert.equal(logs[0].event, 'calendar_failed');
+  assert.deepEqual(graphCalls(), []);
+});
+
+test('when Microsoft asks to wait while preparing, the round stops there', async () => {
+  spaces = [{ mailbox: 'so@enti.cat', model_name: 'Buc 3' }];
+  failures.ensureCalendar = new GraphError(429, 'TooManyRequests', 'slow', 30);
+  const { retryAfterSeconds } = await sync({ ...CONFIG, calendarGroup: 'Reservas leihs' });
+  assert.equal(retryAfterSeconds, 30);
+  assert.deepEqual(graphCalls(), []);
 });

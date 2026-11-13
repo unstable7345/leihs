@@ -1,4 +1,4 @@
-import { itemFor } from './events.js';
+import { calendarsOf, itemFor } from './events.js';
 import { plan } from './plan.js';
 
 /** Date and time on the wall clock of timeZone, "YYYY-MM-DDTHH:MM:SS". */
@@ -80,17 +80,52 @@ async function apply(action, { db, graph }) {
 }
 
 /**
+ * Makes sure every space has its calendar, also before its first reservation.
+ * Graph remembers the calendars it has seen, so after the first round this
+ * costs nothing. Returns the mailboxes that failed and the seconds Microsoft
+ * asked to wait, if it did.
+ */
+async function prepareCalendars({ db, graph, config, log }) {
+  const calendars = calendarsOf(await db.spaces(), config).filter(({ calendar }) => calendar);
+  const failedMailboxes = new Set();
+  if (config.dryRun) {
+    for (const mailbox of new Set(calendars.map((c) => c.mailbox))) {
+      log('would_prepare_calendars', { mailbox, calendars: calendars.filter((c) => c.mailbox === mailbox).map((c) => c.calendar) });
+    }
+    return { failedMailboxes };
+  }
+  for (const { mailbox, calendar } of calendars) {
+    if (failedMailboxes.has(mailbox)) continue;
+    try {
+      if (await graph.ensureCalendar(mailbox, calendar)) log('calendar_created', { mailbox, calendar });
+    } catch (error) {
+      log('calendar_failed', { mailbox, calendar, status: error.status, error: error.message });
+      if (error.retryAfterSeconds || error.status === 429) {
+        return { failedMailboxes, retryAfterSeconds: error.retryAfterSeconds ?? 60 };
+      }
+      if (isMailboxError(error)) failedMailboxes.add(mailbox);
+    }
+  }
+  return { failedMailboxes };
+}
+
+/**
  * One round: reads leihs, compares with the calendars and applies the
  * differences. With dryRun it only logs what it would do. Returns the number
  * of seconds Microsoft asked to wait, if it did.
  */
 export async function syncOnce({ db, graph, config, log, now = new Date() }) {
+  const prepared = await prepareCalendars({ db, graph, config, log });
+  if (prepared.retryAfterSeconds) {
+    return { counts: { create: 0, update: 0, move: 0, delete: 0, forget: 0, failed: 0 }, retryAfterSeconds: prepared.retryAfterSeconds };
+  }
+
   const today = localNow(config.timeZone, now).slice(0, 10);
   const desired = (await db.desired(config.statuses, today)).map((row) => itemFor(row, config));
   const actions = plan(desired, await db.synced(), localNow(config.timeZone, now), config.calendarName ?? '');
 
   const counts = { create: 0, update: 0, move: 0, delete: 0, forget: 0, failed: 0 };
-  const failedMailboxes = new Set();
+  const failedMailboxes = prepared.failedMailboxes;
   let retryAfterSeconds;
 
   for (const action of actions) {

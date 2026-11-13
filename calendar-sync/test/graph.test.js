@@ -9,6 +9,7 @@ let requests;
 let folders; // parent path → [{ id, name }]: calendars of a user or a group, and groups
 let tokens;
 let forced;
+let eventPages; // pages of events returned by GET .../events
 
 function readBody(req) {
   return new Promise((resolve) => {
@@ -39,6 +40,11 @@ before(async () => {
       (folders[path] ??= []).push(folder);
       return reply(res, 201, folder);
     }
+    if (req.method === 'GET' && path.endsWith('/events')) {
+      const page = Number(new URL(req.url, url).searchParams.get('page') ?? 0);
+      const more = page + 1 < eventPages.length;
+      return reply(res, 200, { value: eventPages[page], ...(more && { '@odata.nextLink': `${url}${path}?page=${page + 1}` }) });
+    }
     if (req.method === 'POST') return reply(res, 201, { id: 'event-1' });
     if (req.method === 'PATCH') return reply(res, 200, { id: 'event-1' });
     if (req.method === 'DELETE') return reply(res, 204);
@@ -55,6 +61,7 @@ beforeEach(() => {
   folders = { '/users/so@enti.cat/calendars': [{ id: 'cal-1', name: 'Reservas leihs' }] };
   tokens = 0;
   forced = undefined;
+  eventPages = [[]];
 });
 
 const graphWith = (calendarGroup = '') => createGraph({
@@ -131,4 +138,27 @@ test('errors carry status, code and how long to wait', async () => {
     assert.equal(error.retryAfterSeconds, 12);
     return true;
   });
+});
+
+test('ensureCalendar says whether it created the calendar, and only asks once', async () => {
+  const graph = graphWith('Reservas leihs');
+  assert.equal(await graph.ensureCalendar('so@enti.cat', 'Buc 1'), true);
+  assert.equal(await graph.ensureCalendar('so@enti.cat', 'Buc 1'), false);
+  const before = requests.length;
+  await graph.createEvent('so@enti.cat', 'Buc 1', { subject: 'Buc 1 — Ana' });
+  assert.equal(requests.length, before + 1, 'only the event');
+
+  folders['/users/so@enti.cat/calendars'] = [{ id: 'cal-1', name: 'Reservas leihs' }];
+  assert.equal(await graphWith().ensureCalendar('so@enti.cat', 'Reservas leihs'), false, 'it was there');
+});
+
+test('listEvents follows every page', async () => {
+  eventPages = [[{ id: 'e1', subject: 'A' }], [{ id: 'e2', subject: 'B' }]];
+  const events = await graphWith().listEvents('so@enti.cat', 'Reservas leihs');
+  assert.deepEqual(events.map((e) => e.id), ['e1', 'e2']);
+  assert.deepEqual(calls(), [
+    'GET /users/so@enti.cat/calendars',
+    'GET /users/so@enti.cat/calendars/cal-1/events',
+    'GET /users/so@enti.cat/calendars/cal-1/events',
+  ]);
 });

@@ -1,8 +1,5 @@
-// Reservations of models in a category with an Outlook calendar, including
-// its subcategories. A model in several such categories gets one event per
-// mailbox. Dates and times go out as text: they are local to the pool and
-// must not be shifted by any time zone on the way.
-const DESIRED_SQL = `
+// Categories with an Outlook calendar, and their subcategories with its mailbox.
+const CALENDAR_CATEGORIES = `
 WITH RECURSIVE calendar_categories (id, mailbox) AS (
   SELECT id, outlook_calendar
   FROM model_groups
@@ -12,6 +9,13 @@ WITH RECURSIVE calendar_categories (id, mailbox) AS (
   FROM model_group_links
   JOIN calendar_categories ON calendar_categories.id = model_group_links.parent_id
 )
+`;
+
+// Reservations of models in a category with an Outlook calendar, including
+// its subcategories. A model in several such categories gets one event per
+// mailbox. Dates and times go out as text: they are local to the pool and
+// must not be shifted by any time zone on the way.
+const DESIRED_SQL = `${CALENDAR_CATEGORIES}
 SELECT DISTINCT
   reservations.id AS reservation_id,
   calendar_categories.mailbox,
@@ -39,6 +43,15 @@ WHERE reservations.type = 'ItemLine'
   AND reservations.end_date >= $2::date
 `;
 
+// Every model with a calendar, reserved or not: the spaces.
+const SPACES_SQL = `${CALENDAR_CATEGORIES}
+SELECT DISTINCT calendar_categories.mailbox, models.name AS model_name
+FROM model_links
+JOIN calendar_categories ON calendar_categories.id = model_links.model_group_id
+JOIN models ON models.id = model_links.model_id
+ORDER BY 1, 2
+`;
+
 const SYNCED_SQL = `
 SELECT reservation_id, mailbox, event_id, fingerprint, calendar,
        to_char(ends_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS ends_at
@@ -64,6 +77,11 @@ export function createLeihsDb(pool) {
   return {
     async desired(statuses, today) {
       const { rows } = await pool.query(DESIRED_SQL, [statuses, today]);
+      return rows;
+    },
+
+    async spaces() {
+      const { rows } = await pool.query(SPACES_SQL);
       return rows;
     },
 

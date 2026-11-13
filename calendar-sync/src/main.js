@@ -2,6 +2,7 @@ import pg from 'pg';
 import { createGraph } from './graph.js';
 import { createLeihsDb } from './leihs.js';
 import { syncOnce } from './sync.js';
+import { testEvents } from './test-events.js';
 
 const GUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const STATUSES = ['submitted', 'approved', 'signed', 'closed'];
@@ -9,6 +10,9 @@ const STATUSES = ['submitted', 'approved', 'signed', 'closed'];
 const args = new Set(process.argv.slice(2));
 const once = args.has('--once');
 const dryRun = args.has('--dry-run');
+// One test event per space calendar (--test-events), or away with them (--remove).
+const testRun = args.has('--test-events');
+const remove = args.has('--remove');
 
 const log = (event, details) => console.log(JSON.stringify({ event, ...details }));
 
@@ -66,6 +70,19 @@ const pool = new pg.Pool({
   max: 2,
 });
 const db = createLeihsDb(pool);
+
+if (testRun) {
+  log('test_events', { dryRun, remove });
+  let failed = 0;
+  try {
+    failed = await testEvents({ db, graph, config, log, remove });
+  } catch (error) {
+    log('test_events_failed', { error: error.message });
+    failed = 1;
+  }
+  await pool.end();
+  process.exit(failed > 0 ? 1 : 0);
+}
 
 let stopping = false;
 let timer;
