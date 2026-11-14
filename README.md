@@ -1,5 +1,9 @@
 # leihs
 
+> **Versión de ENTI-UB.** Este repositorio es leihs 7.15.3 con los cambios de ENTI-UB
+> (reservas por horas, castellano y catalán, inicio de sesión con Microsoft, calendarios de
+> Outlook y más). Qué agrega: [FEATURES.md](FEATURES.md). Cómo instalarlo: [INSTALL.md](INSTALL.md).
+
 This is the top level project for leihs (version 4).
 
 # leihs -- the equipment booking and inventory management system
