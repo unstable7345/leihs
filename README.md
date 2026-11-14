@@ -1,60 +1,92 @@
-# leihs
+# leihs · versión ENTI-UB
 
-> **Versión de ENTI-UB.** Este repositorio es leihs 7.15.3 con los cambios de ENTI-UB
-> (reservas por horas, castellano y catalán, inicio de sesión con Microsoft, calendarios de
-> Outlook y más). Qué agrega: [FEATURES.md](FEATURES.md). Cómo instalarlo: [INSTALL.md](INSTALL.md).
+Sistema de préstamo y reservas de equipos y espacios que usa ENTI-UB en
+[leihs.enti.cat](https://leihs.enti.cat). Es una versión propia de
+[leihs](https://github.com/leihs/leihs), el sistema libre de la Zürcher Hochschule der Künste (ZHdK),
+basada en **leihs 7.15.3**, con cambios pensados para una universidad de habla castellana y catalana
+que trabaja con Microsoft 365.
 
-This is the top level project for leihs (version 4).
+> Este no es el repositorio oficial de leihs, y ZHdK no da soporte a esta versión.
 
-# leihs -- the equipment booking and inventory management system
+- **Qué agrega, y qué hay que activar:** [FEATURES.md](FEATURES.md)
+- **Cómo instalarla desde cero:** [INSTALL.md](INSTALL.md)
+- **Versiones publicadas:** [tags `enti-…`](https://github.com/unstable7345/leihs/tags). La última es
+  `enti-2026.11`.
 
-leihs is a system with which universities or other organizations can **manage, book, lend and procure their equipment (and software)**. People can place reservations/bookings on items and then pick them up at e.g. a reservation desk. The system keeps track of who has which items and gives equipment managers time to worry about other things. Besides, the leihs system features a module for budgeting procurements and supporting the procurement process of existing and new equipment.
+## Qué cambia respecto de leihs oficial
 
-# Live demo
+**Reservas por horas.** Además de días completos, un inventario puede ofrecer reservas por horas,
+en pasos de 30 minutos y dentro de su horario, con un límite de horas por grupo. Funciona de punta a
+punta: en el catálogo (borrow), en la gestión del préstamo (lending), en los contratos y en los
+mails.
 
-You can try out a live installation of leihs (the address is below). It's always pointing to the latest stable development release. If the demo happens to be down, please make an issue.
+**Castellano y catalán completos.** Las dos traducciones cubren borrow, lending, Inventory, Manage,
+procure y los mails. Además se corrigieron textos que leihs oficial deja fijos en alemán en todos los
+idiomas.
 
-Demo data is deleted and reset every 24 hours. It may also be deleted at any time during the day as deployment to the demo server is part of our continuous testing / deployment workflow.
+**Inicio de sesión con Microsoft.** Con el servicio [`ms-auth-bridge`](ms-auth-bridge/README.md) se
+entra con la cuenta institucional (Microsoft Entra ID), y la cuenta de leihs se puede crear sola la
+primera vez.
 
-The demo installation is located at http://demo.leihs.zhdk.ch.
+**Reservas en calendarios de Outlook.** El servicio [`calendar-sync`](calendar-sync/README.md) copia
+las reservas aprobadas de una categoría (por ejemplo, salas y bucs) a un buzón de Microsoft 365, con
+un calendario por espacio, e invita a quien reservó.
 
-For login details see [here](https://github.com/leihs/leihs/wiki#live-demo). For the description of the roles tight to the specific login users see [here](Roles.md).
+**Inventario más cómodo.**
+- El fabricante va en el nombre del modelo.
+- Los códigos de inventario se arman con campos del artículo al crear varios a la vez.
+- Hay etiquetas por inventario, que se ponen desde la misma lista, y filtros por etiquetas y por
+  sala.
 
-# Features
+**Espacios como paquetes.** Una sala o un buc se carga como un modelo-paquete, y el catálogo muestra
+lo que incluye.
 
-An up-to-date, human-readable specification of all our scenarios is to be found [here](https://relishapp.com/leihs/).
+**Aspecto.**
+- Modo oscuro en el catálogo.
+- Logo propio en todas las apps.
+- Lending, Inventory y Manage aprovechan las pantallas anchas.
 
-# Wiki
+**Avisos.** Cada inventario puede mandar los avisos de pedido recibido a una dirección propia.
 
-All the important information is to be found [here](https://github.com/leihs/leihs/wiki).
+El detalle de cada cambio, y dónde se configura, está en [FEATURES.md](FEATURES.md).
 
-# Issues
+## Repositorios
 
-All present and past issues are tracked, discussed and dealt with [here](https://github.com/leihs/leihs/issues).
+leihs está repartido en varios repositorios, que este proyecto incluye como submódulos. Los que
+tienen cambios propios están en forks de esta cuenta. El resto se usa tal cual, en la versión de
+leihs 7.15.3.
 
-# Browsers
+| Submódulo | Repositorio | Cambios propios |
+| --- | --- | --- |
+| `admin` | [unstable7345/leihs-admin](https://github.com/unstable7345/leihs-admin) | Sí |
+| `borrow` | [unstable7345/leihs-borrow](https://github.com/unstable7345/leihs-borrow) | Sí |
+| `database` | [unstable7345/leihs_database](https://github.com/unstable7345/leihs_database) | Sí |
+| `legacy` (Lending, Inventory, Manage) | [unstable7345/leihs_legacy](https://github.com/unstable7345/leihs_legacy) | Sí |
+| `legacy/public/assets` | [unstable7345/leihs_legacy_assets](https://github.com/unstable7345/leihs_legacy_assets) | Sí |
+| `borrow/shared-clj` | [unstable7345/leihs-clj-shared](https://github.com/unstable7345/leihs-clj-shared) | Sí |
+| `my` (login y perfil) | [unstable7345/leihs-my](https://github.com/unstable7345/leihs-my) | Sí |
+| `procure` | [unstable7345/leihs-procure](https://github.com/unstable7345/leihs-procure) | Sí |
+| `deploy`, `inventory`, `lending`, `mail` y otros | [leihs](https://github.com/leihs) | No |
 
-Firefox, Chrome and Safari are the only supported browsers.
+Los servicios `ms-auth-bridge` y `calendar-sync` viven en este mismo repositorio.
 
-# Support
+## Ramas
 
-If you are having troubles with the deployment, setting up the development environment or encounter bugs, please first take a look at our existing [issue list](https://github.com/leihs/leihs/issues). If you can't find an answer to your problem or question, then kindly make a new issue. We will occasionally take a look at it, while we don't guarantee any particular response time from our side.
+- **`main`** es la rama principal, en todos los forks. Lo nuevo sale de `main` en una rama
+  `feature/…` y vuelve a `main` cuando está probado.
+- **`master`** es la de leihs oficial y no tiene estos cambios. No sirve como base.
 
-In case of our inability to support you, we encourage you or your organisation to find a suitable partner to support you. We at ZHdK do not feel obliged in any way to offer any kind of support.
+## Créditos y licencia
 
-# References (Who uses leihs?)
-
-leihs is in use at several [universities and organizations](https://github.com/leihs/leihs/wiki#references-who-uses-leihs).
-
-# leihs Blog
-
-Not maintained anymore, but you can maybe find some useful information [there](https://blog.zhdk.ch/leihs).
-
-## Copyright and license
-
-leihs is (C)
+leihs es (C)
 * [Zürcher Hochschule der Künste (Zurich University of the Arts)](http://www.zhdk.ch),
-* Functional LLC, Zürich Switzerland, and
-* contributors.
+* Functional LLC, Zürich, Suiza, y
+* sus colaboradores.
 
-leihs is [Free Software](http://www.gnu.org/philosophy/free-sw.html) under the [GNU General Public License (GPL) v3](http://www.gnu.org/licenses/gpl-3.0.txt), see the included LICENSE file for license details.
+Los cambios de esta versión son de ENTI-UB. Todo el conjunto es
+[software libre](http://www.gnu.org/philosophy/free-sw.html) bajo la
+[GNU General Public License (GPL) v3](http://www.gnu.org/licenses/gpl-3.0.txt), igual que leihs. El
+detalle está en el archivo LICENSE.
+
+La documentación de leihs oficial (wiki, demo, especificaciones) está en
+[github.com/leihs/leihs](https://github.com/leihs/leihs).
