@@ -78,7 +78,9 @@ leihs 7.15.3 (`documentation` y `zhdk-inventory`, en 7.16.0).
 En los forks sin cambios propios, `main` es el commit de la versión oficial. En `inventory`,
 `lending` y `mail` lleva además un commit que solo cambia las URLs de sus submódulos internos.
 
-Los servicios `ms-auth-bridge` y `calendar-sync` viven en este mismo repositorio.
+Los servicios `ms-auth-bridge` y `calendar-sync` viven en este mismo repositorio. La carpeta del
+despliegue sale de [unstable7345/leihs-instance](https://github.com/unstable7345/leihs-instance),
+un fork de la plantilla oficial que trae este repositorio como submódulo, en el último tag.
 
 ## Ramas
 

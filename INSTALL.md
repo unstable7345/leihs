@@ -2,11 +2,12 @@
 
 Esta guía instala la versión de leihs de ENTI-UB, con todo lo que se describe en
 [FEATURES.md](FEATURES.md), en un servidor nuevo. El despliegue es el de leihs oficial (Ansible, en
-el submódulo [`deploy`](deploy/README.md)). La diferencia clave es que hay que apuntarlo a **este**
-repositorio y no al de leihs oficial.
+el submódulo [`deploy`](deploy/README.md)), pero todo sale de los forks de esta versión.
 
-> **Atención:** la plantilla oficial `leihs-instance` trae leihs **oficial**. Si se salta el paso 2,
-> se instala leihs sin ninguno de los cambios de esta versión, y no da ningún error.
+> **Atención:** hay que usar la plantilla de esta versión,
+> [unstable7345/leihs-instance](https://github.com/unstable7345/leihs-instance). La oficial
+> (`leihs/leihs-instance`) trae leihs **oficial**: con ella se instala leihs sin ninguno de los
+> cambios de esta versión, y no da ningún error.
 
 ## Qué hace falta
 
@@ -24,37 +25,26 @@ repositorio y no al de leihs oficial.
 
 ## 1. La carpeta del despliegue
 
-La carpeta del despliegue sale de la plantilla oficial `leihs-instance`. Guarda el inventario de
-Ansible (a qué servidor se despliega y con qué variables) y lleva leihs como submódulo.
+La carpeta del despliegue sale de la plantilla `leihs-instance` de esta versión. Guarda el
+inventario de Ansible (a qué servidor se despliega y con qué variables) y lleva leihs como
+submódulo, ya en la última versión publicada (un tag `enti-…`).
 
 ```bash
-git clone https://github.com/leihs/leihs-instance.git leihs-hosting
+git clone --recurse-submodules https://github.com/unstable7345/leihs-instance.git leihs-hosting
 cd leihs-hosting
 ```
 
-## 2. Apuntar a esta versión de leihs
+## 2. Comprobar la versión
 
-Hay que cambiar el submódulo `leihs` de la plantilla para que use este repositorio, en la versión
-publicada (un tag `enti-…`; la lista está en
-[Releases y tags](https://github.com/unstable7345/leihs/tags)):
+`git -C leihs describe --tags` tiene que mostrar un tag `enti-…`, y debe existir
+`leihs/FEATURES.md`. Si no, la carpeta salió de la plantilla oficial: hay que borrarla y volver al
+paso 1.
 
-```bash
-git submodule set-url leihs https://github.com/unstable7345/leihs.git
-git submodule sync
-git submodule update --init leihs
-cd leihs
-git fetch --tags
-git checkout enti-2026.11
-git submodule sync --recursive
-git submodule update --init --recursive
-cd ..
-```
-
-Para comprobarlo, `git -C leihs log --oneline -1` tiene que mostrar el commit del tag, y debe existir
-`leihs/FEATURES.md`.
-
-Con `main` en vez del tag se instala lo último, que puede estar a medio probar. Para un servicio
-en uso, conviene un tag.
+Para instalar otro tag (la lista está en
+[Releases y tags](https://github.com/unstable7345/leihs/tags)), se cambia como en
+[Actualizar a una versión nueva](#actualizar-a-una-versión-nueva), antes de desplegar. Con `main`
+en vez de un tag se instala lo último, que puede estar a medio probar. Para un servicio en uso,
+conviene un tag.
 
 ## 3. El inventario
 
