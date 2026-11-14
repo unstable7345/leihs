@@ -6,13 +6,13 @@
 	url = https://github.com/unstable7345/leihs_database.git
 [submodule "deploy"]
 	path = deploy
-	url = https://github.com/leihs/leihs_deploy
+	url = https://github.com/unstable7345/leihs_deploy.git
 [submodule "zhdk-inventory"]
 	path = zhdk-inventory
-	url = https://github.com/leihs/leihs_zhdk-inventory
+	url = https://github.com/unstable7345/leihs_zhdk-inventory.git
 [submodule "documentation"]
 	path = documentation
-  url = https://github.com/leihs/leihs_documentation
+	url = https://github.com/unstable7345/leihs_documentation.git
 [submodule "admin"]
 	path = admin
 	url = https://github.com/unstable7345/leihs-admin.git
@@ -24,16 +24,16 @@
 	url = https://github.com/unstable7345/leihs-my.git
 [submodule "integration-tests"]
 	path = integration-tests
-	url = https://github.com/leihs/leihs-integration-tests.git
+	url = https://github.com/unstable7345/leihs-integration-tests.git
 [submodule "mail"]
 	path = mail
-        url = https://github.com/leihs/leihs-mail.git
+	url = https://github.com/unstable7345/leihs-mail.git
 [submodule "borrow"]
 	path = borrow
 	url = https://github.com/unstable7345/leihs-borrow.git
 [submodule "inventory"]
 	path = inventory
-	url = https://github.com/leihs/leihs-inventory.git
+	url = https://github.com/unstable7345/leihs-inventory.git
 [submodule "lending"]
 	path = lending
-	url = https://github.com/leihs/leihs-lending
+	url = https://github.com/unstable7345/leihs-lending.git

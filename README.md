@@ -52,9 +52,10 @@ El detalle de cada cambio, y dónde se configura, está en [FEATURES.md](FEATURE
 
 ## Repositorios
 
-leihs está repartido en varios repositorios, que este proyecto incluye como submódulos. Los que
-tienen cambios propios están en forks de esta cuenta. El resto se usa tal cual, en la versión de
-leihs 7.15.3.
+leihs está repartido en varios repositorios, que este proyecto incluye como submódulos. Todos,
+también los submódulos internos, salen de forks de esta cuenta, así que la versión no depende de
+los repositorios oficiales. Los que no tienen cambios propios están tal cual, en la versión de
+leihs 7.15.3 (`documentation` y `zhdk-inventory`, en 7.16.0).
 
 | Submódulo | Repositorio | Cambios propios |
 | --- | --- | --- |
@@ -63,10 +64,19 @@ leihs 7.15.3.
 | `database` | [unstable7345/leihs_database](https://github.com/unstable7345/leihs_database) | Sí |
 | `legacy` (Lending, Inventory, Manage) | [unstable7345/leihs_legacy](https://github.com/unstable7345/leihs_legacy) | Sí |
 | `legacy/public/assets` | [unstable7345/leihs_legacy_assets](https://github.com/unstable7345/leihs_legacy_assets) | Sí |
-| `borrow/shared-clj` | [unstable7345/leihs-clj-shared](https://github.com/unstable7345/leihs-clj-shared) | Sí |
+| `shared-clj` (dentro de varios submódulos) | [unstable7345/leihs-clj-shared](https://github.com/unstable7345/leihs-clj-shared) | Sí |
 | `my` (login y perfil) | [unstable7345/leihs-my](https://github.com/unstable7345/leihs-my) | Sí |
 | `procure` | [unstable7345/leihs-procure](https://github.com/unstable7345/leihs-procure) | Sí |
-| `deploy`, `inventory`, `lending`, `mail` y otros | [leihs](https://github.com/leihs) | No |
+| `deploy` | [unstable7345/leihs_deploy](https://github.com/unstable7345/leihs_deploy) | No |
+| `inventory` | [unstable7345/leihs-inventory](https://github.com/unstable7345/leihs-inventory) | No |
+| `lending` | [unstable7345/leihs-lending](https://github.com/unstable7345/leihs-lending) | No |
+| `mail` | [unstable7345/leihs-mail](https://github.com/unstable7345/leihs-mail) | No |
+| `documentation` | [unstable7345/leihs_documentation](https://github.com/unstable7345/leihs_documentation) | No |
+| `integration-tests` | [unstable7345/leihs-integration-tests](https://github.com/unstable7345/leihs-integration-tests) | No |
+| `zhdk-inventory` | [unstable7345/leihs_zhdk-inventory](https://github.com/unstable7345/leihs_zhdk-inventory) | No |
+
+En los forks sin cambios propios, `main` es el commit de la versión oficial. En `inventory`,
+`lending` y `mail` lleva además un commit que solo cambia las URLs de sus submódulos internos.
 
 Los servicios `ms-auth-bridge` y `calendar-sync` viven en este mismo repositorio.
 
