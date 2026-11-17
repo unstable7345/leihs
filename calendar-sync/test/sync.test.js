@@ -15,6 +15,7 @@ let failures;
 let logs;
 let spaces;
 let ensured;
+let made; // "mailbox calendar reservation" → event id: what Outlook has, as findEvent sees it
 
 const db = {
   async desired(statuses, today) {
@@ -43,7 +44,14 @@ const graph = {
     ensured.add(`${mailbox} ${calendar}`);
     return !known;
   },
-  async createEvent(mailbox, calendar, event) { call('createEvent', mailbox, event.subject, calendar); return `event-${calls.length}`; },
+  // Kept apart from calls: every create looks first.
+  async findEvent(mailbox, calendar, reservationId) { return made.get(`${mailbox} ${calendar} ${reservationId}`); },
+  async createEvent(mailbox, calendar, event, reservationId) {
+    call('createEvent', mailbox, event.subject, calendar);
+    const id = `event-${calls.length}`;
+    made.set(`${mailbox} ${calendar} ${reservationId}`, id);
+    return id;
+  },
   async updateEvent(mailbox, id, event) { call('updateEvent', mailbox, id, event.subject); },
   async deleteEvent(mailbox, id) { call('deleteEvent', mailbox, id); },
 };
@@ -59,6 +67,7 @@ beforeEach(() => {
   logs = [];
   spaces = [];
   ensured = new Set();
+  made = new Map();
 });
 
 test('local time is the wall clock of the pool', () => {
@@ -88,6 +97,7 @@ test('a change of time updates the same event', async () => {
 test('an event deleted in Outlook comes back on the next change', async () => {
   await sync();
   reservations = [{ ...RESERVATION, end_time: '14:00' }];
+  made.clear(); // deleted in Outlook: findEvent no longer sees it
   failures.updateEvent = new GraphError(404, 'ErrorItemNotFound', 'gone');
   await sync();
   assert.deepEqual(graphCalls().slice(-2).map(([name]) => name), ['updateEvent', 'createEvent']);
@@ -221,4 +231,25 @@ test('when Microsoft asks to wait while preparing, the round stops there', async
   const { retryAfterSeconds } = await sync({ ...CONFIG, calendarGroup: 'Reservas leihs' });
   assert.equal(retryAfterSeconds, 30);
   assert.deepEqual(graphCalls(), []);
+});
+
+test('a create that timed out but made the event takes that event instead of a second one', async () => {
+  // Microsoft made the event, but the answer never came.
+  const { createEvent } = graph;
+  graph.createEvent = async (...args) => {
+    await createEvent(...args);
+    throw new Error('The operation was aborted due to timeout');
+  };
+  try {
+    await sync();
+  } finally {
+    graph.createEvent = createEvent;
+  }
+  assert.equal(rows.size, 0, 'not remembered');
+  assert.equal(logs.at(-2).event, 'create_failed');
+
+  calls = [];
+  await sync();
+  assert.deepEqual(graphCalls(), [], 'no second event');
+  assert.equal(rows.get('r1').eventId, made.get('so@enti.cat Reservas leihs r1'));
 });

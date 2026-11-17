@@ -21,6 +21,9 @@ leihs (Postgres) ──cada minuto──▶ calendar-sync ──Microsoft Graph�
   seguirlo.
 - **Una sola dirección:** leihs manda. Un evento editado en Outlook se sobrescribe en el siguiente
   cambio de la reserva, y uno borrado vuelve a crearse.
+- **Sin duplicados:** cada evento lleva el id de su reserva (una propiedad oculta de Outlook). Si Microsoft
+  tarda más de 15 segundos en responder, el servicio da la creación por fallida, pero puede que el evento
+  ya exista: en la vuelta siguiente lo busca por la reserva y se queda con ese en vez de crear otro.
 - **Si se vacía el campo** de la categoría, se borran sus eventos futuros y los pasados se quedan. Si se
   cambia la dirección, los futuros pasan al calendario nuevo.
 
@@ -140,6 +143,22 @@ sudo systemd-run --pipe --wait --uid=leihs-calendar-sync -p EnvironmentFile=/etc
 ```
 
 Añadiendo `--dry-run`, solo dice en qué calendarios lo haría.
+
+## Eventos duplicados
+
+Antes de que los eventos llevaran el id de la reserva, una creación que tardaba demasiado dejaba el
+evento dos veces (el registro dice `create_failed` … `aborted due to timeout` y, un minuto después,
+`create` de la misma reserva). `--orphans` busca en el calendario de cada espacio los eventos creados por
+leihs que todavía no terminaron y que leihs ya no conoce, y los lista. Con `--orphans --remove` los borra.
+Los eventos hechos a mano y los de prueba no se tocan, y los que ya terminaron tampoco (son historial):
+
+```bash
+sudo systemd-run --pipe --wait --uid=leihs-calendar-sync -p EnvironmentFile=/etc/leihs/config.env -p EnvironmentFile=/etc/leihs-calendar-sync/env -p WorkingDirectory=/opt/leihs-calendar-sync /usr/bin/node src/main.js --orphans
+sudo systemd-run --pipe --wait --uid=leihs-calendar-sync -p EnvironmentFile=/etc/leihs/config.env -p EnvironmentFile=/etc/leihs-calendar-sync/env -p WorkingDirectory=/opt/leihs-calendar-sync /usr/bin/node src/main.js --orphans --remove
+```
+
+Si el evento sobrante tenía invitado a quien reservó, al borrarlo le llega la cancelación de ese evento;
+el otro, el que leihs conoce, sigue en pie.
 
 ## Comprobaciones
 

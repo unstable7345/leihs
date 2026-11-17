@@ -40,7 +40,10 @@ const isMailboxError = (error) => [401, 403].includes(error.status)
 async function apply(action, { db, graph }) {
   switch (action.type) {
     case 'create': {
-      const eventId = await graph.createEvent(action.item.mailbox, action.item.calendar, action.item.event);
+      const { mailbox, calendar, event, reservationId } = action.item;
+      // A create that timed out may still have made the event: take that one instead of a second.
+      const eventId = (await graph.findEvent(mailbox, calendar, reservationId))
+        ?? (await graph.createEvent(mailbox, calendar, event, reservationId));
       await db.save(action.item, eventId);
       return;
     }

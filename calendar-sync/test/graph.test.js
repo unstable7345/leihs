@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { after, before, beforeEach, test } from 'node:test';
-import { createGraph, GraphError } from '../src/graph.js';
+import { createGraph, GraphError, RESERVATION_PROPERTY } from '../src/graph.js';
 
 let server;
 let url;
@@ -32,7 +32,8 @@ before(async () => {
       tokens += 1;
       return reply(res, 200, { access_token: `token-${tokens}`, expires_in: 3599 });
     }
-    requests.push({ method: req.method, path, auth: req.headers.authorization, body: body && JSON.parse(body) });
+    const query = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
+    requests.push({ method: req.method, path, query, prefer: req.headers.prefer, auth: req.headers.authorization, body: body && JSON.parse(body) });
     if (forced) return reply(res, ...forced);
     if (/\/(calendars|calendarGroups)$/.test(path)) {
       if (req.method === 'GET') return reply(res, 200, { value: folders[path] ?? [] });
@@ -40,7 +41,7 @@ before(async () => {
       (folders[path] ??= []).push(folder);
       return reply(res, 201, folder);
     }
-    if (req.method === 'GET' && path.endsWith('/events')) {
+    if (req.method === 'GET' && (path.endsWith('/events') || path.endsWith('/calendarView'))) {
       const page = Number(new URL(req.url, url).searchParams.get('page') ?? 0);
       const more = page + 1 < eventPages.length;
       return reply(res, 200, { value: eventPages[page], ...(more && { '@odata.nextLink': `${url}${path}?page=${page + 1}` }) });
@@ -161,4 +162,37 @@ test('listEvents follows every page', async () => {
     'GET /users/so@enti.cat/calendars/cal-1/events',
     'GET /users/so@enti.cat/calendars/cal-1/events',
   ]);
+});
+
+test('an event created for a reservation carries its id, and is found by it', async () => {
+  const graph = graphWith();
+  await graph.createEvent('so@enti.cat', 'Reservas leihs', { subject: 'Buc 4' }, 'r-82a0');
+  assert.deepEqual(requests[1].body, {
+    subject: 'Buc 4',
+    singleValueExtendedProperties: [{ id: RESERVATION_PROPERTY, value: 'r-82a0' }],
+  });
+
+  eventPages = [[{ id: 'AAMk-1' }]];
+  assert.equal(await graph.findEvent('so@enti.cat', 'Reservas leihs', 'r-82a0'), 'AAMk-1');
+  assert.equal(requests[2].path, '/users/so@enti.cat/calendars/cal-1/events');
+  assert.equal(
+    requests[2].query.$filter,
+    `singleValueExtendedProperties/Any(ep: ep/id eq '${RESERVATION_PROPERTY}' and ep/value eq 'r-82a0')`,
+  );
+
+  eventPages = [[]];
+  assert.equal(await graph.findEvent('so@enti.cat', 'Reservas leihs', 'r-other'), undefined);
+});
+
+test('listEventsBetween reads the calendar view in the pool time zone, with the reservation of each event', async () => {
+  eventPages = [
+    [{ id: 'e1', subject: 'A', singleValueExtendedProperties: [{ id: RESERVATION_PROPERTY, value: 'r1' }] }],
+    [{ id: 'e2', subject: 'B' }],
+  ];
+  const events = await graphWith().listEventsBetween('so@enti.cat', 'Reservas leihs', '2026-11-17T00:00:00', '2028-11-17T00:00:00', 'Europe/Madrid');
+  assert.deepEqual(events, [{ id: 'e1', subject: 'A', reservationId: 'r1' }, { id: 'e2', subject: 'B', reservationId: undefined }]);
+  assert.equal(requests[1].path, '/users/so@enti.cat/calendars/cal-1/calendarView');
+  assert.equal(requests[1].query.startDateTime, '2026-11-17T00:00:00');
+  assert.equal(requests[1].prefer, 'outlook.timezone="Europe/Madrid"');
+  assert.equal(requests.length, 3, 'both pages');
 });

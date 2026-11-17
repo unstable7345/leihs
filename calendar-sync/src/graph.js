@@ -1,4 +1,8 @@
 const TIMEOUT_MS = 15_000;
+
+// Every event created for a reservation carries its id in this extended property,
+// so it can be found again when Microsoft created it but the answer never came.
+export const RESERVATION_PROPERTY = 'String {6c1f7a52-3e0b-4b8e-9c55-2f0d7e1a9b31} Name leihsReservation';
 const TOKEN_MARGIN_MS = 5 * 60_000;
 
 export class GraphError extends Error {
@@ -59,7 +63,10 @@ export function createGraph({
     return token.value;
   }
 
-  async function request(method, path, body) {
+  const request = (method, path, body) => requestIn(undefined, method, path, body);
+
+  // With timeZone, Graph reads and writes the times of events in that zone.
+  async function requestIn(timeZone, method, path, body) {
     // Paging links come back as whole URLs.
     const target = path.startsWith('https://') || path.startsWith('http://') ? path : `${graphUrl}${path}`;
     const response = await fetch(target, {
@@ -67,6 +74,7 @@ export function createGraph({
       headers: {
         Authorization: `Bearer ${await accessToken()}`,
         ...(body && { 'Content-Type': 'application/json' }),
+        ...(timeZone && { Prefer: `outlook.timezone="${timeZone}"` }),
       },
       body: body && JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -129,8 +137,45 @@ export function createGraph({
       return events;
     },
 
-    async createEvent(mailbox, calendarName, event) {
-      const created = await request('POST', `${(await calendar(mailbox, calendarName)).path}/events`, event);
+    /**
+     * Events of the calendar from start to end (local times, "YYYY-MM-DDTHH:MM:SS",
+     * in timeZone), with the reservation they were created for, when they say.
+     */
+    async listEventsBetween(mailbox, calendarName, start, end, timeZone) {
+      const params = new URLSearchParams({
+        startDateTime: start,
+        endDateTime: end,
+        $select: 'id,subject,start,end,bodyPreview',
+        $expand: `singleValueExtendedProperties($filter=id eq '${RESERVATION_PROPERTY}')`,
+        $top: '100',
+      });
+      let next = `${(await calendar(mailbox, calendarName)).path}/calendarView?${params}`;
+      const events = [];
+      while (next) {
+        const page = await requestIn(timeZone, 'GET', next);
+        for (const event of page.value) {
+          const { singleValueExtendedProperties: properties, ...rest } = event;
+          events.push({ ...rest, reservationId: properties?.[0]?.value });
+        }
+        next = page['@odata.nextLink'];
+      }
+      return events;
+    },
+
+    /** Id of the event of the calendar created for the reservation, if there is one. */
+    async findEvent(mailbox, calendarName, reservationId) {
+      const filter = `singleValueExtendedProperties/Any(ep: ep/id eq '${RESERVATION_PROPERTY}' and ep/value eq '${reservationId}')`;
+      const params = new URLSearchParams({ $filter: filter, $select: 'id', $top: '1' });
+      const { value } = await request('GET', `${(await calendar(mailbox, calendarName)).path}/events?${params}`);
+      return value[0]?.id;
+    },
+
+    /** Creates the event; with a reservation id, the event carries it (see findEvent). */
+    async createEvent(mailbox, calendarName, event, reservationId) {
+      const body = reservationId
+        ? { ...event, singleValueExtendedProperties: [{ id: RESERVATION_PROPERTY, value: reservationId }] }
+        : event;
+      const created = await request('POST', `${(await calendar(mailbox, calendarName)).path}/events`, body);
       return created.id;
     },
 
