@@ -6,6 +6,20 @@ function nextDay(date) {
   return day.toISOString().slice(0, 10);
 }
 
+/**
+ * When the space was given back before its time (returned_at, local to the
+ * pool), it was free from then on and someone else may have reserved it: the
+ * event ends at the return, or at midnight after the day of the return for a
+ * reservation of whole days. Null when it was not given back, or when the
+ * return falls outside the event.
+ */
+function givenBackEnd(reservation, allDay, start) {
+  const returned = reservation.returned_at;
+  if (!returned) return null;
+  const end = allDay ? `${nextDay(returned.slice(0, 10))}T00:00:00` : `${returned}:00`;
+  return end > start ? end : null;
+}
+
 function personOf(reservation) {
   const { user_name: user, delegated_user_name: delegated } = reservation;
   return delegated ? `${user} (${delegated})` : user;
@@ -26,9 +40,11 @@ export function eventFor(reservation, { timeZone, inviteBooker = false }) {
     ? `${reservation.start_date}T00:00:00`
     : `${reservation.start_date}T${reservation.start_time}:00`;
   // An all-day event ends at midnight after its last day.
-  const end = allDay
+  const reservedEnd = allDay
     ? `${nextDay(reservation.end_date)}T00:00:00`
     : `${reservation.end_date}T${reservation.end_time}:00`;
+  const givenBack = givenBackEnd(reservation, allDay, start);
+  const end = givenBack && givenBack < reservedEnd ? givenBack : reservedEnd;
   const person = personOf(reservation);
   const lines = [
     `Reservado por: ${person}`,

@@ -29,7 +29,12 @@ SELECT DISTINCT
   -- Who made the reservation: in a delegation, the person acting for it.
   nullif(btrim(coalesce(delegated_users.email, users.email)), '') AS booker_email,
   coalesce(nullif(btrim(reservations.line_purpose), ''), orders.purpose) AS purpose,
-  inventory_pools.name AS pool_name
+  inventory_pools.name AS pool_name,
+  -- When it was given back, local to the pool like the other dates and times
+  -- (leihs stores the moment in UTC).
+  CASE WHEN reservations.status = 'closed' THEN
+    to_char((reservations.returned_at AT TIME ZONE 'UTC') AT TIME ZONE $3, 'YYYY-MM-DD"T"HH24:MI')
+  END AS returned_at
 FROM reservations
 JOIN model_links ON model_links.model_id = reservations.model_id
 JOIN calendar_categories ON calendar_categories.id = model_links.model_group_id
@@ -75,8 +80,8 @@ DELETE FROM outlook_calendar_events WHERE reservation_id = $1 AND mailbox = $2
 
 export function createLeihsDb(pool) {
   return {
-    async desired(statuses, today) {
-      const { rows } = await pool.query(DESIRED_SQL, [statuses, today]);
+    async desired(statuses, today, timeZone) {
+      const { rows } = await pool.query(DESIRED_SQL, [statuses, today, timeZone]);
       return rows;
     },
 

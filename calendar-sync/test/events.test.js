@@ -63,3 +63,27 @@ test('without an email the event is created without attendees', () => {
 test('turning invitations on changes the fingerprint, so existing events get the attendee', () => {
   assert.notEqual(itemFor(RESERVATION, CONFIG).fingerprint, itemFor(RESERVATION, { ...CONFIG, inviteBooker: true }).fingerprint);
 });
+
+test('a space given back early ends at the return, so the next booking does not overlap it', () => {
+  const event = eventFor({ ...RESERVATION, returned_at: '2026-11-12T11:25' }, CONFIG);
+  assert.equal(event.start.dateTime, '2026-11-12T10:00:00');
+  assert.equal(event.end.dateTime, '2026-11-12T11:25:00');
+});
+
+test('a space given back late, or with a return before it started, keeps its reserved end', () => {
+  assert.equal(eventFor({ ...RESERVATION, returned_at: '2026-11-12T13:10' }, CONFIG).end.dateTime, '2026-11-12T12:30:00');
+  assert.equal(eventFor({ ...RESERVATION, returned_at: '2026-11-12T09:50' }, CONFIG).end.dateTime, '2026-11-12T12:30:00');
+});
+
+test('a reservation of whole days given back early ends at midnight after the day of the return', () => {
+  const days = { ...RESERVATION, end_date: '2026-11-30', start_time: null, end_time: null };
+  assert.equal(eventFor({ ...days, returned_at: '2026-11-14T10:00' }, CONFIG).end.dateTime, '2026-11-15T00:00:00');
+  assert.equal(eventFor({ ...days, returned_at: '2026-12-02T10:00' }, CONFIG).end.dateTime, '2026-12-01T00:00:00');
+});
+
+test('giving a space back early changes the fingerprint, so the event is updated', () => {
+  const before = itemFor(RESERVATION, CONFIG);
+  const after = itemFor({ ...RESERVATION, returned_at: '2026-11-12T11:25' }, CONFIG);
+  assert.notEqual(before.fingerprint, after.fingerprint);
+  assert.equal(after.endsAt, '2026-11-12T11:25:00');
+});

@@ -18,8 +18,8 @@ let ensured;
 let made; // "mailbox calendar reservation" → event id: what Outlook has, as findEvent sees it
 
 const db = {
-  async desired(statuses, today) {
-    calls.push(['desired', statuses, today]);
+  async desired(statuses, today, timeZone) {
+    calls.push(['desired', statuses, today, timeZone]);
     return reservations;
   },
   async spaces() { return spaces; },
@@ -77,7 +77,7 @@ test('local time is the wall clock of the pool', () => {
 
 test('asks leihs for the chosen statuses from today, creates the event and remembers it', async () => {
   await sync();
-  assert.deepEqual(calls[0], ['desired', CONFIG.statuses, '2026-11-12']);
+  assert.deepEqual(calls[0], ['desired', CONFIG.statuses, '2026-11-12', CONFIG.timeZone]);
   assert.deepEqual(graphCalls(), [['createEvent', 'so@enti.cat', 'Buc 3 — Ana Puig', 'Reservas leihs']]);
   assert.equal(rows.get('r1').eventId, 'event-2');
 

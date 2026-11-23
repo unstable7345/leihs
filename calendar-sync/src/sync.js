@@ -124,7 +124,7 @@ export async function syncOnce({ db, graph, config, log, now = new Date() }) {
   }
 
   const today = localNow(config.timeZone, now).slice(0, 10);
-  const desired = (await db.desired(config.statuses, today)).map((row) => itemFor(row, config));
+  const desired = (await db.desired(config.statuses, today, config.timeZone)).map((row) => itemFor(row, config));
   const actions = plan(desired, await db.synced(), localNow(config.timeZone, now), config.calendarName ?? '');
 
   const counts = { create: 0, update: 0, move: 0, delete: 0, forget: 0, failed: 0 };
